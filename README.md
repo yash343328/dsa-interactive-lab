@@ -109,10 +109,9 @@ You can deploy this project for free using:
 
 ## 📸 Preview
 
-
-```
-![Preview](assets/Preview.png)
-```
+<p align="center">
+  <img src="assets/Preview.png" width="800"/>
+</p>
 
 ---
 
