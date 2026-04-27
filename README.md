@@ -111,7 +111,7 @@ You can deploy this project for free using:
 
 
 ```
-![Preview](Preview.png)
+![Preview](assets/Preview.png)
 ```
 
 ---
