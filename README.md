@@ -109,10 +109,9 @@ You can deploy this project for free using:
 
 ## 📸 Preview
 
-*Add a screenshot of your project here*
 
 ```
-![Preview](preview.png)
+![Preview](Preview.png)
 ```
 
 ---
