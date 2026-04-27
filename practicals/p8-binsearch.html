@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>P8 — Binary Search | DSA Lab</title>
+  <link rel="stylesheet" href="../assets/shared.css"/>
+  <style>
+    .pointer-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; font-family:'JetBrains Mono',monospace; font-size:11px; }
+    .ptr { padding:3px 10px; border-radius:4px; border:1px solid; }
+    .ptr.low  { color:var(--blue);   border-color:rgba(56,189,248,0.4);  background:rgba(56,189,248,0.08); }
+    .ptr.mid  { color:var(--yellow); border-color:rgba(250,204,21,0.4);  background:rgba(250,204,21,0.08); }
+    .ptr.high { color:var(--red);    border-color:rgba(239,68,68,0.4);   background:rgba(239,68,68,0.08); }
+    .step-history { margin-top:12px; }
+    .step-row { display:flex; gap:6px; align-items:center; margin-bottom:6px; flex-wrap:wrap; }
+    .step-chip {
+      font-family:'JetBrains Mono',monospace; font-size:11px;
+      padding:4px 10px; border-radius:4px; border:1px solid var(--border);
+      color:var(--muted); background:#0d0d15;
+    }
+    .step-chip.current { border-color:var(--accent); color:var(--accent); background:rgba(0,255,136,0.05); }
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+  <a class="back-btn" href="../index.html">← Back to Lab</a>
+  <div class="prac-header">
+    <div class="prac-num">PRACTICAL 08</div>
+    <h1>Binary Search</h1>
+    <p>Efficient search on sorted arrays — Low · Mid · High pointer animation</p>
+  </div>
+
+  <div class="theory-box">
+    <h3>// THEORY</h3>
+    <p><strong style="color:var(--text)">Binary Search</strong> works on sorted arrays by repeatedly halving the search space.</p>
+    <ul style="margin-top:8px">
+      <li>Time: O(log n) — much faster than linear O(n)</li>
+      <li>Space: O(1) iterative, O(log n) recursive</li>
+      <li>Prerequisite: array MUST be sorted</li>
+      <li>Example: searching in 1000 elements takes max 10 steps!</li>
+    </ul>
+  </div>
+
+  <div class="controls">
+    <input type="number" id="target" placeholder="Target value"/>
+    <button class="primary" onclick="startBinarySearch()">▶ Search</button>
+    <button onclick="stepSearch()" id="step-btn">Step ▷</button>
+    <button onclick="resetSearch()">Reset</button>
+  </div>
+
+  <div class="viz-area">
+    <div class="viz-title">// SORTED ARRAY</div>
+    <div class="cells-row" id="arr-vis"></div>
+    <div class="pointer-row" id="ptrs-row"></div>
+  </div>
+
+  <div class="step-info" id="step-info">Enter a target value and press Search</div>
+
+  <div class="viz-area">
+    <div class="viz-title">// SEARCH STEPS HISTORY</div>
+    <div id="step-history"></div>
+    <div style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">
+      Steps taken: <span id="step-count" style="color:var(--accent)">0</span>
+    </div>
+  </div>
+
+  <div class="log-area" id="log">
+    <span class="inf">&gt; Binary Search ready. Array is pre-sorted.</span><br/>
+  </div>
+
+  <div class="theory-box" style="margin-top:20px">
+    <h3>// COMPLEXITY COMPARISON</h3>
+    <table class="complexity-table">
+      <tr><th>Algorithm</th><th>Time</th><th>Sorted Required</th></tr>
+      <tr><td>Linear Search</td><td>O(n)</td><td>No</td></tr>
+      <tr><td>Binary Search</td><td>O(log n)</td><td>Yes</td></tr>
+    </table>
+  </div>
+</div>
+<script>
+  const arr = [2, 5, 8, 12, 16, 23, 38, 56, 72, 91];
+  let low, high, mid, target, searching=false, steps=[], stepIdx=0, stepCount=0;
+
+  function log(msg,cls=''){const l=document.getElementById('log');l.innerHTML+=`<span class="${cls}">&gt; ${msg}</span><br/>`;l.scrollTop=l.scrollHeight;}
+
+  function renderArr(state={}) {
+    const vis=document.getElementById('arr-vis');
+    vis.innerHTML='';
+    arr.forEach((v,i)=>{
+      const wrap=document.createElement('div');
+      wrap.style.textAlign='center';
+      const cell=document.createElement('div');
+      let cls='cell';
+      if(state.found===i) cls+=' found';
+      else if(i===state.mid) cls+=' mid';
+      else if(i===state.low) cls+=' low';
+      else if(i===state.high) cls+=' high';
+      else if(state.eliminated&&(i<state.low||i>state.high)) cell.style.opacity='0.3';
+      cell.className=cls;
+      cell.textContent=v;
+      const lbl=document.createElement('div');
+      lbl.className='idx-label'; lbl.textContent=i;
+      wrap.appendChild(cell); wrap.appendChild(lbl);
+      vis.appendChild(wrap);
+    });
+  }
+
+  function showPtrs(l,m,h) {
+    const row=document.getElementById('ptrs-row');
+    row.innerHTML=`
+      <span class="ptr low">LOW[${l}]=${arr[l]}</span>
+      <span class="ptr mid">MID[${m}]=${arr[m]}</span>
+      <span class="ptr high">HIGH[${h}]=${arr[h]}</span>
+    `;
+  }
+
+  function addStepHistory(l,m,h,result) {
+    const hist=document.getElementById('step-history');
+    const row=document.createElement('div');
+    row.className='step-row';
+    row.innerHTML=`
+      <span class="step-chip current">Step ${stepCount}</span>
+      <span class="step-chip">low=${l}(${arr[l]})</span>
+      <span class="step-chip">mid=${m}(${arr[m]})</span>
+      <span class="step-chip">high=${h}(${arr[h]})</span>
+      <span class="step-chip ${result==='found'?'current':''}">${result}</span>
+    `;
+    hist.appendChild(row);
+    hist.scrollTop=hist.scrollHeight;
+  }
+
+  function buildSearchSteps(t) {
+    const res=[]; let l=0,h=arr.length-1;
+    while(l<=h){
+      const m=Math.floor((l+h)/2);
+      if(arr[m]===t){ res.push({l,m,h,result:'FOUND!'}); break; }
+      else if(arr[m]<t){ res.push({l,m,h,result:`${arr[m]}<${t} → search right`}); l=m+1; }
+      else { res.push({l,m,h,result:`${arr[m]}>${t} → search left`}); h=m-1; }
+      if(l>h) res.push({l:0,m:0,h:arr.length-1,result:'NOT FOUND',notFound:true});
+    }
+    return res;
+  }
+
+  function startBinarySearch() {
+    target=parseInt(document.getElementById('target').value);
+    if(isNaN(target)){log('⚠ Enter a target value','err');return;}
+    steps=buildSearchSteps(target);
+    stepIdx=0; stepCount=0;
+    document.getElementById('step-history').innerHTML='';
+    document.getElementById('step-count').textContent='0';
+    document.getElementById('ptrs-row').innerHTML='';
+    log(`Searching for ${target} in [${arr.join(', ')}]`,'inf');
+    let i=0;
+    const tick=setInterval(()=>{
+      if(i>=steps.length){clearInterval(tick);return;}
+      applyStep(steps[i]);i++;
+    },900);
+  }
+
+  function stepSearch(){
+    target=parseInt(document.getElementById('target').value);
+    if(isNaN(target)){log('⚠ Enter a target value','err');return;}
+    if(stepIdx===0){
+      steps=buildSearchSteps(target);
+      document.getElementById('step-history').innerHTML='';
+      stepCount=0;
+      log(`Stepping through search for ${target}`,'inf');
+    }
+    if(stepIdx<steps.length) applyStep(steps[stepIdx++]);
+  }
+
+  function applyStep(s) {
+    stepCount++;
+    document.getElementById('step-count').textContent=stepCount;
+    if(s.notFound){
+      renderArr({});
+      document.getElementById('ptrs-row').innerHTML='';
+      document.getElementById('step-info').textContent=`Target ${target} NOT FOUND in array`;
+      log(`✗ ${target} not found after ${stepCount} steps`,'err');
+      return;
+    }
+    const found = arr[s.m]===target;
+    renderArr(found?{found:s.m}:{low:s.l,mid:s.m,high:s.h,eliminated:true});
+    showPtrs(s.l,s.m,s.h);
+    addStepHistory(s.l,s.m,s.h,s.result);
+    document.getElementById('step-info').textContent=`Step ${stepCount}: mid[${s.m}]=${arr[s.m]} → ${s.result}`;
+    if(found) log(`✓ Found ${target} at index ${s.m} in ${stepCount} step(s)`,'ok');
+    else log(`Step ${stepCount}: ${s.result}`);
+  }
+
+  function resetSearch(){
+    stepIdx=0; stepCount=0; steps=[];
+    document.getElementById('step-history').innerHTML='';
+    document.getElementById('ptrs-row').innerHTML='';
+    document.getElementById('step-info').textContent='Enter a target value and press Search';
+    document.getElementById('step-count').textContent='0';
+    renderArr({});
+    log('Reset','inf');
+  }
+
+  renderArr({});
+</script>
+</body>
+</html>

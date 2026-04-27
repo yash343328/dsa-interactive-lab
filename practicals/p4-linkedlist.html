@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>P4 — Linked List | DSA Lab</title>
+  <link rel="stylesheet" href="../assets/shared.css"/>
+  <style>
+    .ll-row { display:flex; align-items:center; flex-wrap:wrap; gap:0; }
+    .ll-node {
+      display:flex; align-items:center; gap:0;
+    }
+    .node-box {
+      display:flex; border:2px solid var(--border); border-radius:8px;
+      overflow:hidden; background:#15151e;
+      transition: all 0.4s;
+    }
+    .node-data {
+      padding:12px 16px;
+      font-family:'JetBrains Mono',monospace;
+      font-size:16px; font-weight:700;
+      min-width:50px; text-align:center;
+    }
+    .node-next {
+      padding:12px 10px;
+      border-left:2px solid var(--border);
+      font-family:'JetBrains Mono',monospace;
+      font-size:11px; color:var(--muted);
+      display:flex; align-items:center;
+    }
+    .node-box.head-node { border-color:var(--accent); }
+    .node-box.head-node .node-data { color:var(--accent); }
+    .node-box.tail-node { border-color:var(--yellow); }
+    .node-box.tail-node .node-data { color:var(--yellow); }
+    .node-box.highlight { border-color:var(--purple); animation: pulse 0.6s; }
+    @keyframes pulse { 0%,100%{box-shadow:none} 50%{box-shadow:0 0 20px rgba(168,85,247,0.4)} }
+    .ll-arrow { font-size:18px; color:var(--muted); padding:0 6px; }
+    .null-box {
+      padding:12px 14px;
+      border:2px dashed var(--border);
+      border-radius:8px;
+      font-family:'JetBrains Mono',monospace;
+      font-size:13px; color:var(--muted);
+    }
+    .node-label {
+      font-family:'JetBrains Mono',monospace; font-size:9px;
+      color:var(--muted); text-align:center; margin-top:4px;
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+  <a class="back-btn" href="../index.html">← Back to Lab</a>
+  <div class="prac-header">
+    <div class="prac-num">PRACTICAL 04</div>
+    <h1>Linked List</h1>
+    <p>Singly Linked List — Insert Head/Tail · Delete · Traverse</p>
+  </div>
+
+  <div class="theory-box">
+    <h3>// THEORY</h3>
+    <p>A <strong style="color:var(--text)">Linked List</strong> is a linear structure where each node contains data and a pointer to the next node. No contiguous memory required.</p>
+    <ul style="margin-top:8px">
+      <li>Insert at head/tail: O(1)</li>
+      <li>Insert at position: O(n)</li>
+      <li>Delete: O(n) — need to find the node</li>
+      <li>Search: O(n)</li>
+      <li>Memory efficient — dynamic size</li>
+    </ul>
+  </div>
+
+  <div class="controls">
+    <input type="number" id="val" placeholder="Value"/>
+    <button class="primary" onclick="insertHead()">Insert Head</button>
+    <button class="primary" onclick="insertTail()">Insert Tail</button>
+    <button onclick="deleteNode()">Delete Value</button>
+    <button onclick="traverseList()">Traverse</button>
+    <button onclick="resetLL()">Reset</button>
+  </div>
+
+  <div class="viz-area" style="overflow-x:auto">
+    <div class="viz-title">// LINKED LIST VISUALIZATION</div>
+    <div style="display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding-bottom:8px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);padding-top:13px;margin-right:6px">HEAD→</div>
+      <div id="ll-vis" class="ll-row"></div>
+    </div>
+    <div style="margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">
+      Nodes: <span id="ll-size" style="color:var(--accent)">0</span>
+    </div>
+  </div>
+
+  <div class="log-area" id="log">
+    <span class="inf">&gt; Linked List initialized.</span><br/>
+  </div>
+
+  <div class="theory-box" style="margin-top:24px">
+    <h3>// COMPLEXITY</h3>
+    <table class="complexity-table">
+      <tr><th>Operation</th><th>Time</th><th>Space</th></tr>
+      <tr><td>Insert Head</td><td>O(1)</td><td>O(1)</td></tr>
+      <tr><td>Insert Tail</td><td>O(n)</td><td>O(1)</td></tr>
+      <tr><td>Delete</td><td>O(n)</td><td>O(1)</td></tr>
+      <tr><td>Search</td><td>O(n)</td><td>O(1)</td></tr>
+    </table>
+  </div>
+</div>
+<script>
+  let list = [15, 8, 23, 4, 42];
+  function log(msg, cls='') {
+    const l = document.getElementById('log');
+    l.innerHTML += `<span class="${cls}">&gt; ${msg}</span><br/>`;
+    l.scrollTop = l.scrollHeight;
+  }
+  function render(highlight=null) {
+    const vis = document.getElementById('ll-vis');
+    vis.innerHTML = '';
+    list.forEach((v, i) => {
+      const nodeWrap = document.createElement('div');
+      nodeWrap.style.display='flex'; nodeWrap.style.flexDirection='column'; nodeWrap.style.alignItems='center';
+
+      const node = document.createElement('div');
+      node.className = 'node-box' +
+        (i===0?' head-node':'') +
+        (i===list.length-1?' tail-node':'') +
+        (highlight===i?' highlight':'');
+
+      const data = document.createElement('div');
+      data.className = 'node-data';
+      data.textContent = v;
+
+      const next = document.createElement('div');
+      next.className = 'node-next';
+      next.textContent = i<list.length-1?'→●':'→⊘';
+
+      node.appendChild(data);
+      node.appendChild(next);
+
+      const lbl = document.createElement('div');
+      lbl.className = 'node-label';
+      lbl.textContent = i===0?'HEAD':i===list.length-1?'TAIL':'';
+
+      nodeWrap.appendChild(node);
+      nodeWrap.appendChild(lbl);
+      vis.appendChild(nodeWrap);
+
+      if (i < list.length - 1) {
+        const arrow = document.createElement('div');
+        arrow.className = 'll-arrow';
+        arrow.style.paddingTop='10px';
+        arrow.textContent = '';
+        vis.appendChild(arrow);
+      }
+    });
+    if (!list.length) vis.innerHTML = '<span style="font-family:JetBrains Mono,monospace;font-size:13px;color:var(--muted)">NULL (empty list)</span>';
+    document.getElementById('ll-size').textContent = list.length;
+  }
+  function insertHead() {
+    const v = parseInt(document.getElementById('val').value);
+    if (isNaN(v)) { log('⚠ Enter a value', 'err'); return; }
+    if (list.length >= 10) { log('⚠ Max 10 nodes', 'err'); return; }
+    list.unshift(v);
+    log(`✓ Inserted ${v} at HEAD`, 'ok');
+    render(0);
+    setTimeout(() => render(), 1200);
+  }
+  function insertTail() {
+    const v = parseInt(document.getElementById('val').value);
+    if (isNaN(v)) { log('⚠ Enter a value', 'err'); return; }
+    if (list.length >= 10) { log('⚠ Max 10 nodes', 'err'); return; }
+    list.push(v);
+    log(`✓ Inserted ${v} at TAIL`, 'ok');
+    render(list.length-1);
+    setTimeout(() => render(), 1200);
+  }
+  function deleteNode() {
+    const v = parseInt(document.getElementById('val').value);
+    if (isNaN(v)) { log('⚠ Enter a value to delete', 'err'); return; }
+    const idx = list.indexOf(v);
+    if (idx === -1) { log(`✗ ${v} not found in list`, 'err'); return; }
+    render(idx);
+    setTimeout(() => {
+      list.splice(idx, 1);
+      log(`✓ Deleted node with value ${v}`, 'ok');
+      render();
+    }, 800);
+  }
+  function traverseList() {
+    if (!list.length) { log('⚠ List is empty', 'err'); return; }
+    let i = 0;
+    log(`Traversing: ${list.join(' → ')} → NULL`, 'inf');
+    const scan = setInterval(() => {
+      render(i);
+      i++;
+      if (i >= list.length) { clearInterval(scan); setTimeout(()=>render(), 600); }
+    }, 400);
+  }
+  function resetLL() {
+    list = [15, 8, 23, 4, 42];
+    log('List reset', 'inf');
+    render();
+  }
+  render();
+</script>
+</body>
+</html>

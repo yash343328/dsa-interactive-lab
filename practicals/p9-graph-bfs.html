@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>P9 — Graph BFS | DSA Lab</title>
+  <link rel="stylesheet" href="../assets/shared.css"/>
+  <style>
+    #graph-canvas { width:100%; display:block; cursor:pointer; border-radius:8px; }
+    .bfs-queue {
+      display:flex; gap:6px; flex-wrap:wrap; padding:10px 0;
+    }
+    .bfs-node {
+      width:38px; height:38px;
+      display:flex; align-items:center; justify-content:center;
+      border:2px solid var(--accent);
+      border-radius:6px;
+      font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:700;
+      color:var(--accent); background:rgba(0,255,136,0.08);
+      animation: popIn 0.3s ease;
+    }
+    @keyframes popIn { from{opacity:0;transform:scale(0.7)} to{opacity:1;transform:scale(1)} }
+    .visited-list { display:flex; gap:6px; flex-wrap:wrap; padding:10px 0; }
+    .vis-node {
+      padding:6px 12px; border-radius:6px;
+      background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.3);
+      font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700;
+      color:var(--purple); animation: popIn 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+  <a class="back-btn" href="../index.html">← Back to Lab</a>
+  <div class="prac-header">
+    <div class="prac-num">PRACTICAL 09</div>
+    <h1>Graph BFS</h1>
+    <p>Breadth-First Search traversal with queue visualization</p>
+  </div>
+
+  <div class="theory-box">
+    <h3>// THEORY</h3>
+    <p><strong style="color:var(--text)">BFS (Breadth-First Search)</strong> explores a graph level by level using a queue. Starts at a source node and visits all neighbors before going deeper.</p>
+    <ul style="margin-top:8px">
+      <li>Time: O(V + E) — vertices + edges</li>
+      <li>Space: O(V) — queue storage</li>
+      <li>Uses: shortest path, level-order, web crawling, social networks</li>
+      <li>Uses Queue (FIFO) internally</li>
+    </ul>
+  </div>
+
+  <div class="controls">
+    <label style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)">Start Node:</label>
+    <select id="start-node" style="background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:13px;outline:none">
+      <option>A</option><option>B</option><option>C</option><option>D</option>
+      <option>E</option><option>F</option><option>G</option>
+    </select>
+    <button class="primary" onclick="startBFS()">▶ Run BFS</button>
+    <button onclick="resetBFS()">Reset</button>
+  </div>
+
+  <div class="viz-area">
+    <div class="viz-title">// GRAPH VISUALIZATION (click node to start BFS)</div>
+    <canvas id="graph-canvas" height="280"></canvas>
+  </div>
+
+  <div style="display:flex;gap:16px;flex-wrap:wrap">
+    <div class="viz-area" style="flex:1;min-width:200px">
+      <div class="viz-title">// BFS QUEUE</div>
+      <div class="bfs-queue" id="bfs-queue"></div>
+    </div>
+    <div class="viz-area" style="flex:1;min-width:200px">
+      <div class="viz-title">// VISITED ORDER</div>
+      <div class="visited-list" id="visited-list"></div>
+    </div>
+  </div>
+
+  <div class="step-info" id="step-info">Select a start node and run BFS</div>
+  <div class="log-area" id="log"><span class="inf">&gt; Graph BFS ready.</span><br/></div>
+</div>
+<script>
+  // Graph definition
+  const nodes = {
+    A:{x:0.5,y:0.1}, B:{x:0.2,y:0.35}, C:{x:0.8,y:0.35},
+    D:{x:0.1,y:0.65}, E:{x:0.4,y:0.65}, F:{x:0.65,y:0.65}, G:{x:0.9,y:0.65}
+  };
+  const edges = [['A','B'],['A','C'],['B','D'],['B','E'],['C','F'],['C','G'],['D','E'],['F','G']];
+  const adj = {};
+  Object.keys(nodes).forEach(n=>{adj[n]=[];});
+  edges.forEach(([a,b])=>{adj[a].push(b);adj[b].push(a);});
+
+  let nodeState = {}; // 'unvisited','inqueue','visited'
+  let bfsQueue = [], visitedOrder = [];
+
+  function log(msg,cls=''){const l=document.getElementById('log');l.innerHTML+=`<span class="${cls}">&gt; ${msg}</span><br/>`;l.scrollTop=l.scrollHeight;}
+
+  function drawGraph() {
+    const canvas = document.getElementById('graph-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth || 600;
+    const W=canvas.width, H=280;
+    ctx.clearRect(0,0,W,H);
+
+    // Draw edges
+    edges.forEach(([a,b])=>{
+      const na=nodes[a], nb=nodes[b];
+      ctx.beginPath();
+      ctx.moveTo(na.x*W, na.y*H);
+      ctx.lineTo(nb.x*W, nb.y*H);
+      ctx.strokeStyle='#2a2a3e'; ctx.lineWidth=2; ctx.stroke();
+    });
+
+    // Draw nodes
+    Object.entries(nodes).forEach(([name,pos])=>{
+      const x=pos.x*W, y=pos.y*H, r=22;
+      const state=nodeState[name]||'unvisited';
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+      if(state==='visited')   { ctx.fillStyle='rgba(168,85,247,0.3)'; ctx.strokeStyle='#a855f7'; }
+      else if(state==='inqueue'){ ctx.fillStyle='rgba(0,255,136,0.2)'; ctx.strokeStyle='#00ff88'; }
+      else                    { ctx.fillStyle='#15151e'; ctx.strokeStyle='#3a3a5a'; }
+      ctx.lineWidth=2; ctx.fill(); ctx.stroke();
+      ctx.fillStyle = state==='visited'?'#a855f7':state==='inqueue'?'#00ff88':'#e2e8f0';
+      ctx.font='bold 14px JetBrains Mono';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(name, x, y);
+    });
+  }
+
+  function updateQueueVis() {
+    const qDiv=document.getElementById('bfs-queue');
+    qDiv.innerHTML='';
+    bfsQueue.forEach(n=>{
+      const d=document.createElement('div');
+      d.className='bfs-node'; d.textContent=n;
+      qDiv.appendChild(d);
+    });
+  }
+
+  function addVisited(n) {
+    const vDiv=document.getElementById('visited-list');
+    const d=document.createElement('div');
+    d.className='vis-node'; d.textContent=n;
+    vDiv.appendChild(d);
+  }
+
+  function startBFS() {
+    const start=document.getElementById('start-node').value;
+    nodeState={}; bfsQueue=[]; visitedOrder=[];
+    Object.keys(nodes).forEach(n=>nodeState[n]='unvisited');
+    document.getElementById('visited-list').innerHTML='';
+    document.getElementById('step-info').textContent='Starting BFS...';
+
+    bfsQueue.push(start);
+    nodeState[start]='inqueue';
+    updateQueueVis(); drawGraph();
+    log(`BFS start from node ${start}`,'inf');
+
+    let delay=0;
+    const visited=new Set();
+
+    function bfsStep() {
+      if(!bfsQueue.length) {
+        document.getElementById('step-info').textContent=`BFS complete! Visited: ${visitedOrder.join(' → ')}`;
+        log(`✓ BFS order: ${visitedOrder.join(' → ')}`,'ok');
+        return;
+      }
+      const curr=bfsQueue.shift();
+      if(visited.has(curr)){setTimeout(bfsStep,300);return;}
+      visited.add(curr);
+      nodeState[curr]='visited';
+      visitedOrder.push(curr);
+      addVisited(curr);
+      document.getElementById('step-info').textContent=`Visiting ${curr} | Neighbors: [${adj[curr].join(', ')}]`;
+      log(`Dequeue ${curr} → visiting neighbors: ${adj[curr].join(', ')}`);
+
+      adj[curr].forEach(nb=>{
+        if(!visited.has(nb)&&!bfsQueue.includes(nb)){
+          bfsQueue.push(nb);
+          nodeState[nb]='inqueue';
+        }
+      });
+      updateQueueVis(); drawGraph();
+      setTimeout(bfsStep, 900);
+    }
+    setTimeout(bfsStep, 500);
+  }
+
+  function resetBFS() {
+    nodeState={}; bfsQueue=[]; visitedOrder=[];
+    document.getElementById('visited-list').innerHTML='';
+    document.getElementById('bfs-queue').innerHTML='';
+    document.getElementById('step-info').textContent='Select a start node and run BFS';
+    log('Reset','inf');
+    drawGraph();
+  }
+
+  // Click on canvas to pick start node
+  document.getElementById('graph-canvas').addEventListener('click', function(e){
+    const rect=this.getBoundingClientRect();
+    const mx=(e.clientX-rect.left)/rect.width;
+    const my=(e.clientY-rect.top)/280;
+    let closest=null, minD=Infinity;
+    Object.entries(nodes).forEach(([n,pos])=>{
+      const d=Math.hypot(pos.x-mx,pos.y-my);
+      if(d<minD){minD=d;closest=n;}
+    });
+    if(minD<0.08){
+      document.getElementById('start-node').value=closest;
+      log(`Selected node ${closest} as start`,'inf');
+    }
+  });
+
+  window.addEventListener('resize',drawGraph);
+  drawGraph();
+</script>
+</body>
+</html>

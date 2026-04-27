@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>P3 — Queue | DSA Lab</title>
+  <link rel="stylesheet" href="../assets/shared.css"/>
+  <style>
+    .queue-row { display:flex; gap:0; align-items:center; flex-wrap:wrap; }
+    .q-item {
+      width:72px; height:60px;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      border: 2px solid var(--border);
+      font-family:'JetBrains Mono',monospace;
+      font-size:18px; font-weight:700;
+      background:#15151e;
+      transition: all 0.4s;
+      position:relative;
+    }
+    .q-item:first-child { border-radius:8px 0 0 8px; }
+    .q-item:last-child  { border-radius:0 8px 8px 0; }
+    .q-item .q-label { font-size:9px; color:var(--muted); letter-spacing:1px; margin-top:2px; }
+    .q-item.front-item { border-color:var(--accent); background:rgba(0,255,136,0.08); }
+    .q-item.rear-item  { border-color:var(--yellow);  background:rgba(250,204,21,0.08); }
+    .q-item.front-item .q-label { color:var(--accent); }
+    .q-item.rear-item  .q-label { color:var(--yellow); }
+    .q-arrow { font-size:20px; color:var(--muted); padding:0 4px; }
+    .q-ends { display:flex; justify-content:space-between; margin-top:12px;
+      font-family:'JetBrains Mono',monospace; font-size:11px; }
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+  <a class="back-btn" href="../index.html">← Back to Lab</a>
+  <div class="prac-header">
+    <div class="prac-num">PRACTICAL 03</div>
+    <h1>Queue</h1>
+    <p>First In First Out (FIFO) — Enqueue · Dequeue · Front · Rear</p>
+  </div>
+
+  <div class="theory-box">
+    <h3>// THEORY</h3>
+    <p>A <strong style="color:var(--text)">Queue</strong> is a FIFO (First In, First Out) data structure. Elements are added at the REAR and removed from the FRONT.</p>
+    <ul style="margin-top:8px">
+      <li>Enqueue: add to rear — O(1)</li>
+      <li>Dequeue: remove from front — O(1)</li>
+      <li>Use cases: CPU scheduling, BFS, print queues, task management</li>
+    </ul>
+  </div>
+
+  <div class="controls">
+    <input type="number" id="val" placeholder="Value"/>
+    <button class="primary" onclick="enqueue()">Enqueue →</button>
+    <button onclick="dequeue()">← Dequeue</button>
+    <button onclick="frontPeek()">Front 👁</button>
+    <button onclick="resetQ()">Reset</button>
+  </div>
+
+  <div class="viz-area">
+    <div class="viz-title">// QUEUE VISUALIZATION (FRONT → REAR)</div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent)">FRONT→</div>
+      <div id="queue-vis" class="queue-row"></div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--yellow)">→REAR</div>
+    </div>
+    <div class="q-ends">
+      <span>Front: <span id="front-val" style="color:var(--accent)">—</span></span>
+      <span>Rear: <span id="rear-val" style="color:var(--yellow)">—</span></span>
+      <span>Size: <span id="q-size" style="color:var(--text)">0</span></span>
+    </div>
+  </div>
+
+  <div class="log-area" id="log">
+    <span class="inf">&gt; Queue ready. Max capacity: 8</span><br/>
+  </div>
+
+  <div class="theory-box" style="margin-top:24px">
+    <h3>// COMPLEXITY</h3>
+    <table class="complexity-table">
+      <tr><th>Operation</th><th>Time</th></tr>
+      <tr><td>Enqueue</td><td>O(1)</td></tr>
+      <tr><td>Dequeue</td><td>O(1)</td></tr>
+      <tr><td>Front/Peek</td><td>O(1)</td></tr>
+      <tr><td>Search</td><td>O(n)</td></tr>
+    </table>
+  </div>
+</div>
+<script>
+  let queue = [12, 8, 27, 5];
+  const MAX = 8;
+  function log(msg, cls='') {
+    const l = document.getElementById('log');
+    l.innerHTML += `<span class="${cls}">&gt; ${msg}</span><br/>`;
+    l.scrollTop = l.scrollHeight;
+  }
+  function render() {
+    const vis = document.getElementById('queue-vis');
+    vis.innerHTML = '';
+    queue.forEach((v, i) => {
+      const item = document.createElement('div');
+      item.className = 'q-item' + (i===0?' front-item':i===queue.length-1?' rear-item':'');
+      const lbl = i===0?'FRONT':i===queue.length-1?'REAR':'';
+      item.innerHTML = `${v}<span class="q-label">${lbl}</span>`;
+      vis.appendChild(item);
+    });
+    document.getElementById('front-val').textContent = queue.length ? queue[0] : '—';
+    document.getElementById('rear-val').textContent  = queue.length ? queue[queue.length-1] : '—';
+    document.getElementById('q-size').textContent    = queue.length;
+  }
+  function enqueue() {
+    const v = parseInt(document.getElementById('val').value);
+    if (isNaN(v)) { log('⚠ Enter a valid value', 'err'); return; }
+    if (queue.length >= MAX) { log('⚠ Queue is full!', 'err'); return; }
+    queue.push(v);
+    log(`✓ Enqueued ${v} at rear`, 'ok');
+    render();
+  }
+  function dequeue() {
+    if (!queue.length) { log('⚠ Queue is empty!', 'err'); return; }
+    const v = queue.shift();
+    log(`✓ Dequeued ${v} from front`, 'ok');
+    render();
+  }
+  function frontPeek() {
+    if (!queue.length) { log('⚠ Queue is empty', 'err'); return; }
+    log(`👁 Front element: ${queue[0]}`, 'inf');
+  }
+  function resetQ() {
+    queue = [12, 8, 27, 5];
+    log('Queue reset', 'inf');
+    render();
+  }
+  render();
+</script>
+</body>
+</html>

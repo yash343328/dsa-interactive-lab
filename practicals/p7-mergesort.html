@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>P7 — Merge Sort | DSA Lab</title>
+  <link rel="stylesheet" href="../assets/shared.css"/>
+  <style>
+    .merge-stage {
+      margin-bottom: 16px;
+    }
+    .stage-label {
+      font-family:'JetBrains Mono',monospace;
+      font-size:10px; color:var(--muted);
+      letter-spacing:2px; margin-bottom:8px;
+    }
+    .merge-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .merge-group { display:flex; gap:4px; padding:8px; border:1px solid var(--border); border-radius:8px; background:#15151e; }
+    .merge-group.active { border-color:var(--accent); background:rgba(0,255,136,0.05); }
+    .merge-group.merging { border-color:var(--yellow); background:rgba(250,204,21,0.05); }
+    .m-cell {
+      width:40px; height:40px; display:flex; align-items:center; justify-content:center;
+      border-radius:6px; border:1px solid var(--border);
+      font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:700;
+      background:#0a0a0f;
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+  <a class="back-btn" href="../index.html">← Back to Lab</a>
+  <div class="prac-header">
+    <div class="prac-num">PRACTICAL 07</div>
+    <h1>Merge Sort</h1>
+    <p>Divide & Conquer — animated splitting and merging phases</p>
+  </div>
+
+  <div class="theory-box">
+    <h3>// THEORY</h3>
+    <p><strong style="color:var(--text)">Merge Sort</strong> divides the array into halves, recursively sorts each half, then merges them back in sorted order.</p>
+    <ul style="margin-top:8px">
+      <li>Time: O(n log n) — all cases</li>
+      <li>Space: O(n) — extra array needed</li>
+      <li>Stable, reliable, great for linked lists</li>
+      <li>Best for large datasets where stability matters</li>
+    </ul>
+  </div>
+
+  <div class="controls">
+    <button class="primary" onclick="runMergeSort()">▶ Run Merge Sort</button>
+    <button onclick="generateRandom()">Random Array</button>
+    <button onclick="resetMS()">Reset</button>
+  </div>
+
+  <div class="viz-area">
+    <div class="viz-title">// ORIGINAL ARRAY</div>
+    <div class="cells-row" id="orig-arr"></div>
+  </div>
+
+  <div class="viz-area" id="stages-area">
+    <div class="viz-title">// MERGE SORT STEPS</div>
+    <div id="stages"></div>
+  </div>
+
+  <div class="viz-area">
+    <div class="viz-title">// SORTED RESULT</div>
+    <div class="cells-row" id="sorted-arr"></div>
+  </div>
+
+  <div class="log-area" id="log">
+    <span class="inf">&gt; Merge Sort ready. Click "Run" to animate.</span><br/>
+  </div>
+</div>
+<script>
+  let arr = [38, 27, 43, 3, 9, 82, 10];
+  const colors = ['#00ff88','#38bdf8','#a855f7','#ff6b35','#facc15'];
+
+  function log(msg,cls=''){const l=document.getElementById('log');l.innerHTML+=`<span class="${cls}">&gt; ${msg}</span><br/>`;l.scrollTop=l.scrollHeight;}
+
+  function renderCells(container, a, colorClass='') {
+    container.innerHTML='';
+    a.forEach(v=>{
+      const c=document.createElement('div');
+      c.className='cell '+(colorClass||'');
+      c.textContent=v;
+      container.appendChild(c);
+    });
+  }
+
+  function generateRandom(){
+    arr=Array.from({length:7},()=>Math.floor(Math.random()*90)+5);
+    renderCells(document.getElementById('orig-arr'),arr);
+    document.getElementById('stages').innerHTML='';
+    document.getElementById('sorted-arr').innerHTML='';
+    log('New array: ['+arr.join(', ')+']','inf');
+  }
+  function resetMS(){
+    arr=[38,27,43,3,9,82,10];
+    renderCells(document.getElementById('orig-arr'),arr);
+    document.getElementById('stages').innerHTML='';
+    document.getElementById('sorted-arr').innerHTML='';
+    log('Reset to default array','inf');
+  }
+
+  function merge(left, right) {
+    const result=[];
+    let i=0,j=0;
+    while(i<left.length&&j<right.length){
+      if(left[i]<=right[j]) result.push(left[i++]);
+      else result.push(right[j++]);
+    }
+    return result.concat(left.slice(i)).concat(right.slice(j));
+  }
+
+  function runMergeSort() {
+    const stagesDiv = document.getElementById('stages');
+    stagesDiv.innerHTML='';
+    document.getElementById('sorted-arr').innerHTML='';
+
+    const allStages=[];
+    function msRecurse(a, depth=0, label='') {
+      if(a.length<=1){allStages.push({depth,arr:a,type:'base',label});return a;}
+      const mid=Math.floor(a.length/2);
+      const left=a.slice(0,mid);
+      const right=a.slice(mid);
+      allStages.push({depth,arr:a,type:'split',label,left,right});
+      const sortedL=msRecurse(left,depth+1,label+'L');
+      const sortedR=msRecurse(right,depth+1,label+'R');
+      const merged=merge(sortedL,sortedR);
+      allStages.push({depth,arr:merged,type:'merge',label,left:sortedL,right:sortedR});
+      return merged;
+    }
+    const sorted=msRecurse([...arr]);
+
+    let i=0;
+    const tick=setInterval(()=>{
+      if(i>=allStages.length){
+        clearInterval(tick);
+        renderCells(document.getElementById('sorted-arr'),sorted,'found');
+        log(`✓ Sorted: [${sorted.join(', ')}]`,'ok');
+        return;
+      }
+      const s=allStages[i];
+      const row=document.createElement('div');
+      row.className='merge-stage';
+      row.style.animation='none';
+
+      const lbl=document.createElement('div');
+      lbl.className='stage-label';
+      lbl.textContent=`${s.type.toUpperCase()} [depth ${s.depth}${s.label?' · '+s.label:''}]`;
+      row.appendChild(lbl);
+
+      const mrow=document.createElement('div');
+      mrow.className='merge-row';
+
+      if(s.type==='split'){
+        addGroup(mrow,s.arr,'active');
+        const arrow=document.createElement('span');
+        arrow.style.cssText='font-size:18px;color:var(--muted);padding:0 8px';
+        arrow.textContent='→';
+        mrow.appendChild(arrow);
+        addGroup(mrow,s.left,'');
+        const plus=document.createElement('span');
+        plus.style.cssText='font-size:14px;color:var(--muted);padding:0 6px';
+        plus.textContent='|';
+        mrow.appendChild(plus);
+        addGroup(mrow,s.right,'');
+        log(`Split [${s.arr.join(',')}] → [${s.left.join(',')}] + [${s.right.join(',')}]`);
+      } else if(s.type==='merge'){
+        addGroup(mrow,s.left,'');
+        const plus=document.createElement('span');
+        plus.style.cssText='font-size:14px;color:var(--muted);padding:0 6px';
+        plus.textContent='+';
+        mrow.appendChild(plus);
+        addGroup(mrow,s.right,'');
+        const arrow=document.createElement('span');
+        arrow.style.cssText='font-size:18px;color:var(--accent);padding:0 8px';
+        arrow.textContent='→';
+        mrow.appendChild(arrow);
+        addGroup(mrow,s.arr,'merging');
+        log(`Merge [${s.left.join(',')}] + [${s.right.join(',')}] → [${s.arr.join(',')}]`,'ok');
+      } else {
+        addGroup(mrow,s.arr,'');
+      }
+
+      row.appendChild(mrow);
+      stagesDiv.appendChild(row);
+      stagesDiv.scrollTop=stagesDiv.scrollHeight;
+      i++;
+    },700);
+  }
+
+  function addGroup(parent, arr, cls) {
+    const g=document.createElement('div');
+    g.className='merge-group '+(cls||'');
+    arr.forEach(v=>{
+      const c=document.createElement('div');
+      c.className='m-cell';
+      c.textContent=v;
+      g.appendChild(c);
+    });
+    parent.appendChild(g);
+  }
+
+  renderCells(document.getElementById('orig-arr'),arr);
+</script>
+</body>
+</html>

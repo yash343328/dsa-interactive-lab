@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>P5 — Binary Search Tree | DSA Lab</title>
+  <link rel="stylesheet" href="../assets/shared.css"/>
+  <style>
+    #bst-canvas { width:100%; background:transparent; display:block; }
+    .traversal-out {
+      display:flex; flex-wrap:wrap; gap:6px; margin-top:12px;
+    }
+    .trav-node {
+      padding:6px 12px; border-radius:6px;
+      border:1px solid var(--border);
+      font-family:'JetBrains Mono',monospace; font-size:13px;
+      background:#15151e; color:var(--text);
+      animation: popIn 0.3s ease;
+    }
+    @keyframes popIn { from{opacity:0;transform:scale(0.7)} to{opacity:1;transform:scale(1)} }
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+  <a class="back-btn" href="../index.html">← Back to Lab</a>
+  <div class="prac-header">
+    <div class="prac-num">PRACTICAL 05</div>
+    <h1>Binary Search Tree</h1>
+    <p>Insert · Search · Inorder/Preorder/Postorder Traversal</p>
+  </div>
+
+  <div class="theory-box">
+    <h3>// THEORY</h3>
+    <p>A <strong style="color:var(--text)">BST</strong> has the property: left child &lt; parent &lt; right child. Enables fast search.</p>
+    <ul style="margin-top:8px">
+      <li>Insert/Search: O(log n) average, O(n) worst</li>
+      <li>Inorder traversal gives sorted output</li>
+      <li>Used in: databases, file systems, priority queues</li>
+    </ul>
+  </div>
+
+  <div class="controls">
+    <input type="number" id="val" placeholder="Value (1-99)"/>
+    <button class="primary" onclick="insertBST()">Insert</button>
+    <button onclick="searchBST()">Search</button>
+    <button onclick="inorder()">Inorder</button>
+    <button onclick="preorder()">Preorder</button>
+    <button onclick="postorder()">Postorder</button>
+    <button onclick="resetBST()">Reset</button>
+  </div>
+
+  <div class="viz-area">
+    <div class="viz-title">// BST VISUALIZATION</div>
+    <canvas id="bst-canvas" height="300"></canvas>
+  </div>
+
+  <div class="viz-area" style="min-height:60px">
+    <div class="viz-title">// TRAVERSAL OUTPUT</div>
+    <div class="traversal-out" id="trav-out"></div>
+  </div>
+
+  <div class="log-area" id="log">
+    <span class="inf">&gt; BST ready. Insert values to build the tree.</span><br/>
+  </div>
+</div>
+<script>
+  class Node { constructor(v){this.val=v;this.left=null;this.right=null;} }
+  let root = null;
+  let highlighted = null;
+
+  function insertNode(node, v) {
+    if (!node) return new Node(v);
+    if (v < node.val) node.left = insertNode(node.left, v);
+    else if (v > node.val) node.right = insertNode(node.right, v);
+    return node;
+  }
+
+  function log(msg, cls='') {
+    const l = document.getElementById('log');
+    l.innerHTML += `<span class="${cls}">&gt; ${msg}</span><br/>`;
+    l.scrollTop = l.scrollHeight;
+  }
+
+  function drawTree() {
+    const canvas = document.getElementById('bst-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth || 600;
+    const W = canvas.width;
+    ctx.clearRect(0,0,W,300);
+    if (!root) { ctx.fillStyle='#64748b'; ctx.font='14px JetBrains Mono'; ctx.fillText('(empty tree)',W/2-50,50); return; }
+
+    function getDepth(n) { if(!n)return 0; return 1+Math.max(getDepth(n.left),getDepth(n.right)); }
+    const depth = getDepth(root);
+    const R = Math.min(22, (W / (2**depth)) * 0.5);
+
+    function draw(node, x, y, spread) {
+      if (!node) return;
+      // Draw edges
+      if (node.left) {
+        const lx = x - spread, ly = y + 70;
+        ctx.beginPath(); ctx.moveTo(x,y+R); ctx.lineTo(lx,ly-R);
+        ctx.strokeStyle='#2a2a3e'; ctx.lineWidth=2; ctx.stroke();
+        draw(node.left, lx, ly, spread/2);
+      }
+      if (node.right) {
+        const rx = x + spread, ry = y + 70;
+        ctx.beginPath(); ctx.moveTo(x,y+R); ctx.lineTo(rx,ry-R);
+        ctx.strokeStyle='#2a2a3e'; ctx.lineWidth=2; ctx.stroke();
+        draw(node.right, rx, ry, spread/2);
+      }
+      // Draw node circle
+      const isHighlighted = highlighted === node.val;
+      ctx.beginPath(); ctx.arc(x,y,R,0,Math.PI*2);
+      if (node === root) { ctx.fillStyle='rgba(0,255,136,0.15)'; }
+      else if (isHighlighted) { ctx.fillStyle='rgba(250,204,21,0.2)'; }
+      else { ctx.fillStyle='#15151e'; }
+      ctx.fill();
+      ctx.strokeStyle = isHighlighted ? '#facc15' : (node===root?'#00ff88':'#3a3a5a');
+      ctx.lineWidth = isHighlighted ? 3 : 2;
+      ctx.stroke();
+      ctx.fillStyle = isHighlighted ? '#facc15' : (node===root?'#00ff88':'#e2e8f0');
+      ctx.font = `bold ${R*0.9}px JetBrains Mono`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(node.val, x, y);
+    }
+    draw(root, W/2, 30, W/4);
+  }
+
+  function insertBST() {
+    const v = parseInt(document.getElementById('val').value);
+    if (isNaN(v)||v<1||v>999) { log('⚠ Enter 1–999', 'err'); return; }
+    root = insertNode(root, v);
+    highlighted = v;
+    log(`✓ Inserted ${v}`, 'ok');
+    drawTree();
+    setTimeout(()=>{highlighted=null;drawTree();},1500);
+  }
+
+  function searchBST() {
+    const v = parseInt(document.getElementById('val').value);
+    if (isNaN(v)) { log('⚠ Enter a value', 'err'); return; }
+    let node = root; let steps = 0;
+    while(node) {
+      steps++;
+      if (v===node.val) { highlighted=v; log(`✓ Found ${v} in ${steps} step(s)`, 'ok'); drawTree(); setTimeout(()=>{highlighted=null;drawTree();},1800); return; }
+      node = v < node.val ? node.left : node.right;
+    }
+    log(`✗ ${v} not found in tree`, 'err');
+  }
+
+  function inorder() {
+    const res=[]; function go(n){if(!n)return;go(n.left);res.push(n.val);go(n.right);}
+    go(root); showTraversal(res,'Inorder (sorted)');
+  }
+  function preorder() {
+    const res=[]; function go(n){if(!n)return;res.push(n.val);go(n.left);go(n.right);}
+    go(root); showTraversal(res,'Preorder');
+  }
+  function postorder() {
+    const res=[]; function go(n){if(!n)return;go(n.left);go(n.right);res.push(n.val);}
+    go(root); showTraversal(res,'Postorder');
+  }
+  function showTraversal(arr, name) {
+    if (!root){log('⚠ Tree is empty','err');return;}
+    log(`${name}: ${arr.join(' → ')}`, 'inf');
+    const out = document.getElementById('trav-out');
+    out.innerHTML = `<span style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--muted);margin-right:8px">${name}:</span>`;
+    arr.forEach((v,i) => {
+      setTimeout(()=>{
+        const chip = document.createElement('div');
+        chip.className='trav-node';
+        chip.textContent=v;
+        out.appendChild(chip);
+      }, i*150);
+    });
+  }
+
+  function resetBST() {
+    root = null; highlighted=null;
+    document.getElementById('trav-out').innerHTML='';
+    log('BST cleared','inf');
+    drawTree();
+  }
+
+  // Default tree
+  [40,20,60,10,30,50,70].forEach(v=>{root=insertNode(root,v);});
+  window.addEventListener('resize', drawTree);
+  setTimeout(drawTree, 100);
+</script>
+</body>
+</html>

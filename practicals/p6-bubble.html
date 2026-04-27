@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>P6 — Bubble Sort | DSA Lab</title>
+  <link rel="stylesheet" href="../assets/shared.css"/>
+  <style>
+    .bar-container {
+      display:flex; align-items:flex-end; gap:6px;
+      height:200px; padding:10px 0;
+    }
+    .bar {
+      flex:1; min-width:20px;
+      background:linear-gradient(to top, #3a3a5a, #2a2a3e);
+      border-radius:4px 4px 0 0;
+      border:1px solid #3a3a5a;
+      transition: all 0.3s;
+      position:relative;
+      display:flex; align-items:flex-end; justify-content:center;
+    }
+    .bar .bval {
+      font-family:'JetBrains Mono',monospace;
+      font-size:11px; color:var(--muted);
+      padding-bottom:2px;
+      position:absolute; bottom:-20px;
+    }
+    .bar.comparing { background:linear-gradient(to top,rgba(250,204,21,0.6),rgba(250,204,21,0.3)); border-color:var(--yellow); }
+    .bar.swapping  { background:linear-gradient(to top,rgba(255,107,53,0.7),rgba(255,107,53,0.3)); border-color:var(--accent2); }
+    .bar.sorted    { background:linear-gradient(to top,rgba(168,85,247,0.6),rgba(168,85,247,0.2)); border-color:var(--purple); }
+    .stats-row { display:flex; gap:20px; flex-wrap:wrap; margin-top:12px; font-family:'JetBrains Mono',monospace; font-size:12px; }
+    .stat { color:var(--muted); }
+    .stat span { color:var(--accent); font-weight:700; }
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+  <a class="back-btn" href="../index.html">← Back to Lab</a>
+  <div class="prac-header">
+    <div class="prac-num">PRACTICAL 06</div>
+    <h1>Bubble Sort</h1>
+    <p>Step-by-step animated sorting with comparison & swap counters</p>
+  </div>
+
+  <div class="theory-box">
+    <h3>// THEORY</h3>
+    <p><strong style="color:var(--text)">Bubble Sort</strong> repeatedly compares adjacent elements and swaps them if they are in the wrong order. Largest elements "bubble up" to end.</p>
+    <ul style="margin-top:8px">
+      <li>Time: O(n²) average & worst, O(n) best (optimized)</li>
+      <li>Space: O(1) — in-place</li>
+      <li>Stable sort — equal elements maintain relative order</li>
+    </ul>
+  </div>
+
+  <div class="controls">
+    <button class="primary" onclick="startSort()">▶ Sort</button>
+    <button onclick="stepSort()" id="step-btn">Step ▷</button>
+    <button onclick="generateRandom()">Random Array</button>
+    <button onclick="resetSort()">Reset</button>
+    <div class="speed-wrap">
+      Speed: <input type="range" id="speed" min="100" max="1000" value="500" step="100" oninput="updateSpeed(this.value)"/>
+      <span id="speed-val">500ms</span>
+    </div>
+  </div>
+
+  <div class="viz-area">
+    <div class="viz-title">// ARRAY BARS</div>
+    <div class="bar-container" id="bars"></div>
+    <div style="height:28px"></div>
+    <div class="stats-row">
+      <div class="stat">Comparisons: <span id="comps">0</span></div>
+      <div class="stat">Swaps: <span id="swaps">0</span></div>
+      <div class="stat">Pass: <span id="pass">0</span></div>
+      <div class="stat">Status: <span id="status" style="color:var(--muted)">Ready</span></div>
+    </div>
+  </div>
+
+  <div class="step-info" id="step-info">Press ▶ Sort or Step ▷ to begin</div>
+  <div class="log-area" id="log">
+    <span class="inf">&gt; Bubble sort ready.</span><br/>
+  </div>
+</div>
+<script>
+  let arr = [64, 34, 25, 12, 22, 11, 90, 42];
+  let orig = [...arr];
+  let sortSteps = [];
+  let stepIdx = 0;
+  let sortInterval = null;
+  let delay = 500;
+  let comps=0,swaps_=0,pass_=0;
+
+  function log(msg,cls=''){const l=document.getElementById('log');l.innerHTML+=`<span class="${cls}">&gt; ${msg}</span><br/>`;l.scrollTop=l.scrollHeight;}
+  function updateSpeed(v){delay=parseInt(v);document.getElementById('speed-val').textContent=v+'ms';}
+
+  function buildSteps(a) {
+    const steps=[], arr=[...a];
+    const n=arr.length;
+    for(let i=0;i<n-1;i++){
+      for(let j=0;j<n-1-i;j++){
+        steps.push({type:'compare',i:j,j:j+1,sorted:n-1-i});
+        if(arr[j]>arr[j+1]){
+          [arr[j],arr[j+1]]=[arr[j+1],arr[j]];
+          steps.push({type:'swap',i:j,j:j+1,sorted:n-1-i});
+        }
+      }
+      steps.push({type:'pass',pass:i+1,sorted:n-1-i});
+    }
+    steps.push({type:'done'});
+    return {steps,finalArr:arr};
+  }
+
+  function renderBars(a, state={}) {
+    const max=Math.max(...a);
+    const cont=document.getElementById('bars');
+    cont.innerHTML='';
+    a.forEach((v,i)=>{
+      const bar=document.createElement('div');
+      bar.className='bar'+(state.comparing&&(i===state.comparing[0]||i===state.comparing[1])?' comparing':'')+
+        (state.swapping&&(i===state.swapping[0]||i===state.swapping[1])?' swapping':'')+
+        (state.sorted&&i>=state.sorted?' sorted':'');
+      bar.style.height=`${(v/max)*180}px`;
+      const lbl=document.createElement('div');
+      lbl.className='bval';lbl.textContent=v;
+      bar.appendChild(lbl);
+      cont.appendChild(bar);
+    });
+  }
+
+  function generateRandom(){
+    if(sortInterval)clearInterval(sortInterval);
+    arr=Array.from({length:8},()=>Math.floor(Math.random()*90)+5);
+    orig=[...arr];comps=0;swaps_=0;pass_=0;stepIdx=0;
+    updateStats();renderBars(arr);
+    document.getElementById('step-info').textContent='Press ▶ Sort or Step ▷ to begin';
+    document.getElementById('status').textContent='Ready';
+    log('New random array: ['+arr.join(', ')+']','inf');
+  }
+
+  function resetSort(){
+    if(sortInterval)clearInterval(sortInterval);
+    arr=[...orig];comps=0;swaps_=0;pass_=0;stepIdx=0;
+    updateStats();renderBars(arr);
+    document.getElementById('step-info').textContent='Array reset.';
+    document.getElementById('status').textContent='Ready';
+  }
+
+  function updateStats(){
+    document.getElementById('comps').textContent=comps;
+    document.getElementById('swaps').textContent=swaps_;
+    document.getElementById('pass').textContent=pass_;
+  }
+
+  function startSort(){
+    if(sortInterval)clearInterval(sortInterval);
+    arr=[...orig];comps=0;swaps_=0;pass_=0;
+    const {steps}=buildSteps(arr);
+    sortSteps=steps; stepIdx=0;
+    document.getElementById('status').textContent='Sorting...';
+    sortInterval=setInterval(()=>{
+      if(stepIdx>=sortSteps.length){clearInterval(sortInterval);return;}
+      applyStep(sortSteps[stepIdx]);stepIdx++;
+    },delay);
+  }
+
+  function stepSort(){
+    if(!sortSteps.length||stepIdx===0){
+      arr=[...orig];comps=0;swaps_=0;pass_=0;
+      const {steps}=buildSteps(arr);
+      sortSteps=steps;stepIdx=0;
+      document.getElementById('status').textContent='Stepping...';
+    }
+    if(sortInterval)clearInterval(sortInterval);
+    if(stepIdx<sortSteps.length){applyStep(sortSteps[stepIdx]);stepIdx++;}
+  }
+
+  function applyStep(step){
+    if(step.type==='compare'){
+      comps++;
+      renderBars(arr,{comparing:[step.i,step.j],sorted:step.sorted+1});
+      document.getElementById('step-info').textContent=`Comparing arr[${step.i}]=${arr[step.i]} and arr[${step.j}]=${arr[step.j]}`;
+    } else if(step.type==='swap'){
+      swaps_++;
+      [arr[step.i],arr[step.j]]=[arr[step.j],arr[step.i]];
+      renderBars(arr,{swapping:[step.i,step.j],sorted:step.sorted+1});
+      document.getElementById('step-info').textContent=`Swapped! ${arr[step.j]} and ${arr[step.i]}`;
+      log(`Swap: pos ${step.i}↔${step.j}  →  [${arr.join(', ')}]`);
+    } else if(step.type==='pass'){
+      pass_=step.pass;
+      renderBars(arr,{sorted:step.sorted+1});
+      document.getElementById('step-info').textContent=`Pass ${step.pass} complete.`;
+    } else if(step.type==='done'){
+      renderBars(arr,{sorted:0});
+      document.getElementById('status').textContent='✓ Sorted!';
+      document.getElementById('step-info').textContent=`Sorting complete! Comparisons: ${comps}, Swaps: ${swaps_}`;
+      log(`✓ Sorted: [${arr.join(', ')}]  |  Comparisons: ${comps}, Swaps: ${swaps_}`,'ok');
+    }
+    updateStats();
+  }
+
+  renderBars(arr);
+</script>
+</body>
+</html>

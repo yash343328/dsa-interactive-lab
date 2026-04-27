@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>P1 — Array Operations | DSA Lab</title>
+  <link rel="stylesheet" href="../assets/shared.css"/>
+</head>
+<body>
+<div class="page-wrap">
+  <a class="back-btn" href="../index.html">← Back to Lab</a>
+  <div class="prac-header">
+    <div class="prac-num">PRACTICAL 01</div>
+    <h1>Array Operations</h1>
+    <p>Insert · Delete · Search · Traverse — with live visualization</p>
+  </div>
+
+  <div class="theory-box">
+    <h3>// THEORY</h3>
+    <p>An <strong style="color:var(--text)">Array</strong> is a contiguous block of memory storing elements of the same type, accessible via index.</p>
+    <ul style="margin-top:8px">
+      <li>Access: O(1) — direct index</li>
+      <li>Search: O(n) — linear scan</li>
+      <li>Insertion/Deletion: O(n) — shifting required</li>
+    </ul>
+  </div>
+
+  <div class="controls">
+    <input type="number" id="val" placeholder="Value" min="-99" max="999"/>
+    <input type="number" id="idx" placeholder="Index" min="0"/>
+    <button class="primary" onclick="insertAtIdx()">Insert</button>
+    <button onclick="deleteAtIdx()">Delete</button>
+    <button onclick="searchVal()">Search</button>
+    <button onclick="resetArr()">Reset</button>
+  </div>
+
+  <div class="viz-area">
+    <div class="viz-title">// ARRAY VISUALIZATION</div>
+    <div class="cells-row" id="arr-vis"></div>
+    <div style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">
+      Size: <span id="arr-size" style="color:var(--accent)">0</span> / 15
+    </div>
+  </div>
+
+  <div class="log-area" id="log">
+    <span class="inf">&gt; Array initialized. Add elements to begin.</span><br/>
+  </div>
+
+  <div class="theory-box" style="margin-top:24px">
+    <h3>// COMPLEXITY</h3>
+    <table class="complexity-table">
+      <tr><th>Operation</th><th>Best</th><th>Average</th><th>Worst</th></tr>
+      <tr><td>Access</td><td>O(1)</td><td>O(1)</td><td>O(1)</td></tr>
+      <tr><td>Search</td><td>O(1)</td><td>O(n)</td><td>O(n)</td></tr>
+      <tr><td>Insertion</td><td>O(1)</td><td>O(n)</td><td>O(n)</td></tr>
+      <tr><td>Deletion</td><td>O(1)</td><td>O(n)</td><td>O(n)</td></tr>
+    </table>
+  </div>
+</div>
+<script>
+  let arr = [10, 25, 7, 43, 18, 56];
+  function log(msg, cls='') {
+    const l = document.getElementById('log');
+    l.innerHTML += `<span class="${cls}">&gt; ${msg}</span><br/>`;
+    l.scrollTop = l.scrollHeight;
+  }
+  function render(highlights={}) {
+    const vis = document.getElementById('arr-vis');
+    vis.innerHTML = '';
+    arr.forEach((v,i) => {
+      const wrap = document.createElement('div');
+      wrap.style.textAlign='center';
+      const cell = document.createElement('div');
+      cell.className = 'cell ' + (highlights[i] || '');
+      cell.textContent = v;
+      const label = document.createElement('div');
+      label.className = 'idx-label';
+      label.textContent = i;
+      wrap.appendChild(cell);
+      wrap.appendChild(label);
+      vis.appendChild(wrap);
+    });
+    document.getElementById('arr-size').textContent = arr.length;
+  }
+  function insertAtIdx() {
+    const v = parseInt(document.getElementById('val').value);
+    const i = document.getElementById('idx').value;
+    if (isNaN(v)) { log('⚠ Enter a valid value', 'err'); return; }
+    if (arr.length >= 15) { log('⚠ Array is full (max 15)', 'err'); return; }
+    const idx = i === '' ? arr.length : parseInt(i);
+    if (idx < 0 || idx > arr.length) { log(`⚠ Index out of bounds (0–${arr.length})`, 'err'); return; }
+    arr.splice(idx, 0, v);
+    log(`✓ Inserted ${v} at index ${idx}`, 'ok');
+    const h = {}; h[idx] = 'highlight';
+    render(h);
+    setTimeout(() => render(), 1200);
+  }
+  function deleteAtIdx() {
+    const i = parseInt(document.getElementById('idx').value);
+    if (isNaN(i) || i < 0 || i >= arr.length) { log(`⚠ Invalid index (0–${arr.length-1})`, 'err'); return; }
+    const v = arr[i];
+    const h = {}; h[i] = 'comparing';
+    render(h);
+    setTimeout(() => {
+      arr.splice(i, 1);
+      log(`✓ Deleted ${v} from index ${i}`, 'ok');
+      render();
+    }, 700);
+  }
+  function searchVal() {
+    const v = parseInt(document.getElementById('val').value);
+    if (isNaN(v)) { log('⚠ Enter a value to search', 'err'); return; }
+    let step = 0;
+    const scan = setInterval(() => {
+      if (step >= arr.length) {
+        clearInterval(scan);
+        log(`✗ ${v} not found in array`, 'err');
+        render();
+        return;
+      }
+      const h = {}; h[step] = 'comparing';
+      render(h);
+      if (arr[step] === v) {
+        clearInterval(scan);
+        const fh = {}; fh[step] = 'found';
+        render(fh);
+        log(`✓ Found ${v} at index ${step}`, 'ok');
+        setTimeout(() => render(), 2000);
+      }
+      step++;
+    }, 350);
+  }
+  function resetArr() {
+    arr = [10, 25, 7, 43, 18, 56];
+    log('Array reset to default', 'inf');
+    render();
+  }
+  render();
+</script>
+</body>
+</html>

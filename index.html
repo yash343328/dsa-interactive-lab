@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DSA Interactive Lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --card: #111118;
+      --border: #1e1e2e;
+      --accent: #00ff88;
+      --accent2: #ff6b35;
+      --accent3: #7c3aed;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --glow: rgba(0,255,136,0.15);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    /* Animated background grid */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      z-index: 0;
+      pointer-events: none;
+    }
+    header {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      padding: 60px 20px 40px;
+    }
+    .logo-tag {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: var(--accent);
+      background: rgba(0,255,136,0.08);
+      border: 1px solid rgba(0,255,136,0.2);
+      padding: 6px 16px;
+      border-radius: 2px;
+      margin-bottom: 24px;
+      text-transform: uppercase;
+    }
+    h1 {
+      font-size: clamp(2.4rem, 7vw, 5rem);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -2px;
+    }
+    h1 span {
+      color: var(--accent);
+      text-shadow: 0 0 40px rgba(0,255,136,0.4);
+    }
+    .subtitle {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 16px;
+      letter-spacing: 1px;
+    }
+    .grid {
+      position: relative;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px 24px 80px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 0%, var(--glow), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .card:hover {
+      border-color: var(--accent);
+      transform: translateY(-4px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px var(--accent);
+    }
+    .card:hover::before { opacity: 1; }
+    .card-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+    }
+    .card-icon {
+      font-size: 36px;
+      margin-bottom: 16px;
+      display: block;
+    }
+    .card h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+    .card p {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .tag {
+      display: inline-block;
+      margin-top: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      padding: 3px 10px;
+      border-radius: 99px;
+      border: 1px solid;
+      letter-spacing: 1px;
+    }
+    .tag.linear { color: #00c9ff; border-color: rgba(0,201,255,0.3); background: rgba(0,201,255,0.05); }
+    .tag.tree   { color: #ff6b35; border-color: rgba(255,107,53,0.3); background: rgba(255,107,53,0.05); }
+    .tag.graph  { color: #a855f7; border-color: rgba(168,85,247,0.3); background: rgba(168,85,247,0.05); }
+    .tag.sort   { color: #facc15; border-color: rgba(250,204,21,0.3); background: rgba(250,204,21,0.05); }
+    .tag.search { color: #00ff88; border-color: rgba(0,255,136,0.3); background: rgba(0,255,136,0.05); }
+    .arrow {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 32px; height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      color: var(--muted);
+      transition: all 0.3s;
+    }
+    .card:hover .arrow {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(0,255,136,0.1);
+    }
+    footer {
+      position: relative; z-index: 10;
+      text-align: center;
+      padding: 30px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+    @media (max-width: 600px) {
+      header { padding: 40px 16px 24px; }
+      .grid { padding: 16px 14px 60px; gap: 14px; }
+      .card { padding: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo-tag">// DSA Interactive Lab</div>
+    <h1>Data Structures &<br><span>Algorithms</span></h1>
+    <p class="subtitle">10 hands-on practicals · visualize · interact · learn</p>
+  </header>
+
+  <div class="grid">
+
+    <a class="card" href="practicals/p1-array.html">
+      <div class="card-num">PRACTICAL 01</div>
+      <span class="card-icon">📦</span>
+      <h2>Array Operations</h2>
+      <p>Insert, delete, search & traverse array elements with live visualization.</p>
+      <span class="tag linear">LINEAR</span>
+      <div class="arrow">→</div>
+    </a>
+
+    <a class="card" href="practicals/p2-stack.html">
+      <div class="card-num">PRACTICAL 02</div>
+      <span class="card-icon">🥞</span>
+      <h2>Stack — Push & Pop</h2>
+      <p>LIFO structure: push, pop, peek with animated stack visualization.</p>
+      <span class="tag linear">LINEAR</span>
+      <div class="arrow">→</div>
+    </a>
+
+    <a class="card" href="practicals/p3-queue.html">
+      <div class="card-num">PRACTICAL 03</div>
+      <span class="card-icon">🚶</span>
+      <h2>Queue — Enqueue & Dequeue</h2>
+      <p>FIFO structure: enqueue & dequeue with animated queue visualization.</p>
+      <span class="tag linear">LINEAR</span>
+      <div class="arrow">→</div>
+    </a>
+
+    <a class="card" href="practicals/p4-linkedlist.html">
+      <div class="card-num">PRACTICAL 04</div>
+      <span class="card-icon">🔗</span>
+      <h2>Linked List</h2>
+      <p>Singly linked list: insert at head/tail, delete nodes, traverse.</p>
+      <span class="tag linear">LINEAR</span>
+      <div class="arrow">→</div>
+    </a>
+
+    <a class="card" href="practicals/p5-bst.html">
+      <div class="card-num">PRACTICAL 05</div>
+      <span class="card-icon">🌳</span>
+      <h2>Binary Search Tree</h2>
+      <p>Insert nodes, search, and visualize BST with inorder traversal.</p>
+      <span class="tag tree">TREE</span>
+      <div class="arrow">→</div>
+    </a>
+
+    <a class="card" href="practicals/p6-bubble.html">
+      <div class="card-num">PRACTICAL 06</div>
+      <span class="card-icon">🔵</span>
+      <h2>Bubble Sort</h2>
+      <p>Step-by-step animated bubble sort with comparison counter.</p>
+      <span class="tag sort">SORTING</span>
+      <div class="arrow">→</div>
+    </a>
+
+    <a class="card" href="practicals/p7-mergesort.html">
+      <div class="card-num">PRACTICAL 07</div>
+      <span class="card-icon">⚡</span>
+      <h2>Merge Sort</h2>
+      <p>Divide and conquer merge sort with animated splitting and merging.</p>
+      <span class="tag sort">SORTING</span>
+      <div class="arrow">→</div>
+    </a>
+
+    <a class="card" href="practicals/p8-binsearch.html">
+      <div class="card-num">PRACTICAL 08</div>
+      <span class="card-icon">🔍</span>
+      <h2>Binary Search</h2>
+      <p>Search in sorted array with highlighted low, mid, high pointers.</p>
+      <span class="tag search">SEARCH</span>
+      <div class="arrow">→</div>
+    </a>
+
+    <a class="card" href="practicals/p9-graph-bfs.html">
+      <div class="card-num">PRACTICAL 09</div>
+      <span class="card-icon">🌐</span>
+      <h2>Graph BFS</h2>
+      <p>Breadth-first search traversal on a graph with queue visualization.</p>
+      <span class="tag graph">GRAPH</span>
+      <div class="arrow">→</div>
+    </a>
+
+    <a class="card" href="practicals/p10-hashing.html">
+      <div class="card-num">PRACTICAL 10</div>
+      <span class="card-icon">🗂️</span>
+      <h2>Hashing — Hash Table</h2>
+      <p>Insert & search keys using hash function with collision chaining.</p>
+      <span class="tag search">HASHING</span>
+      <div class="arrow">→</div>
+    </a>
+
+  </div>
+
+<footer>Developed by Yash Jain · DSA Interactive Lab · 10 Practicals</footer>
+</body>
+</html>

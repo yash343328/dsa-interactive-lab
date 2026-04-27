@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>P10 — Hashing | DSA Lab</title>
+  <link rel="stylesheet" href="../assets/shared.css"/>
+  <style>
+    .hash-table { display:grid; gap:8px; margin-top:8px; }
+    .hash-bucket {
+      display:flex; align-items:center; gap:10px;
+    }
+    .bucket-idx {
+      width:40px; height:40px;
+      display:flex; align-items:center; justify-content:center;
+      border:2px solid var(--border); border-radius:6px;
+      font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700;
+      color:var(--muted); background:#0d0d15;
+      flex-shrink:0;
+    }
+    .bucket-chain { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+    .chain-node {
+      display:flex; align-items:center;
+      padding:8px 14px;
+      border:2px solid var(--border); border-radius:6px;
+      font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700;
+      background:#15151e; transition:all 0.3s;
+    }
+    .chain-node.new { border-color:var(--accent); color:var(--accent); background:rgba(0,255,136,0.08); animation:popIn 0.4s ease; }
+    .chain-node.found { border-color:var(--yellow); color:var(--yellow); background:rgba(250,204,21,0.08); }
+    .chain-arrow { color:var(--muted); font-size:14px; }
+    .null-tag { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); }
+    @keyframes popIn { from{opacity:0;transform:scale(0.7)} to{opacity:1;transform:scale(1)} }
+    .hash-formula {
+      font-family:'JetBrains Mono',monospace; font-size:14px;
+      padding:12px 20px; border-radius:8px;
+      background:rgba(0,255,136,0.05); border:1px solid rgba(0,255,136,0.2);
+      color:var(--accent); margin-bottom:20px; text-align:center;
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+  <a class="back-btn" href="../index.html">← Back to Lab</a>
+  <div class="prac-header">
+    <div class="prac-num">PRACTICAL 10</div>
+    <h1>Hash Table</h1>
+    <p>Hash function · Insert · Search · Collision Chaining</p>
+  </div>
+
+  <div class="theory-box">
+    <h3>// THEORY</h3>
+    <p>A <strong style="color:var(--text)">Hash Table</strong> maps keys to values using a hash function. Collisions are resolved using chaining (linked list at each bucket).</p>
+    <ul style="margin-top:8px">
+      <li>Insert/Search/Delete: O(1) average, O(n) worst (all collide)</li>
+      <li>Load Factor = n/m (n=elements, m=buckets)</li>
+      <li>Collision: two keys map to same index → use chaining or probing</li>
+      <li>Used in: databases, caches, symbol tables, sets</li>
+    </ul>
+  </div>
+
+  <div class="hash-formula">
+    hash(key) = key mod <span id="mod-val">7</span> &nbsp;|&nbsp; Table size: <span id="tbl-size">7</span>
+  </div>
+
+  <div class="controls">
+    <input type="number" id="key" placeholder="Key (integer)"/>
+    <input type="text" id="keyval" placeholder="Value (optional)"/>
+    <button class="primary" onclick="insertKey()">Insert</button>
+    <button onclick="searchKey()">Search</button>
+    <button onclick="deleteKey()">Delete</button>
+    <button onclick="resetHash()">Reset</button>
+    <select id="table-size" onchange="changeSize(this.value)" style="background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:13px;outline:none">
+      <option value="5">Size 5</option>
+      <option value="7" selected>Size 7</option>
+      <option value="11">Size 11</option>
+    </select>
+  </div>
+
+  <div class="viz-area">
+    <div class="viz-title">// HASH TABLE (chaining)</div>
+    <div id="hash-table" class="hash-table"></div>
+    <div style="margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">
+      Load Factor: <span id="load-factor" style="color:var(--accent)">0.00</span> &nbsp;|&nbsp;
+      Keys stored: <span id="key-count" style="color:var(--accent)">0</span>
+    </div>
+  </div>
+
+  <div class="step-info" id="step-info">Insert a key to see hashing in action</div>
+  <div class="log-area" id="log"><span class="inf">&gt; Hash Table initialized. Size = 7</span><br/></div>
+
+  <div class="theory-box" style="margin-top:20px">
+    <h3>// COMPLEXITY</h3>
+    <table class="complexity-table">
+      <tr><th>Operation</th><th>Average</th><th>Worst Case</th></tr>
+      <tr><td>Insert</td><td>O(1)</td><td>O(n)</td></tr>
+      <tr><td>Search</td><td>O(1)</td><td>O(n)</td></tr>
+      <tr><td>Delete</td><td>O(1)</td><td>O(n)</td></tr>
+    </table>
+  </div>
+</div>
+<script>
+  let TABLE_SIZE = 7;
+  let table = Array.from({length:TABLE_SIZE}, ()=>[]);
+  let highlighted = {bucket:-1, chain:-1, type:''};
+
+  function log(msg,cls=''){const l=document.getElementById('log');l.innerHTML+=`<span class="${cls}">&gt; ${msg}</span><br/>`;l.scrollTop=l.scrollHeight;}
+
+  function hashFn(k){ return ((k % TABLE_SIZE) + TABLE_SIZE) % TABLE_SIZE; }
+
+  function renderTable() {
+    const div=document.getElementById('hash-table');
+    div.innerHTML='';
+    let total=0;
+    table.forEach((chain,i)=>{
+      total+=chain.length;
+      const row=document.createElement('div');
+      row.className='hash-bucket';
+      const idx=document.createElement('div');
+      idx.className='bucket-idx';
+      idx.style.borderColor=chain.length>0?'rgba(0,255,136,0.3)':'';
+      idx.textContent=i;
+      row.appendChild(idx);
+
+      const chainDiv=document.createElement('div');
+      chainDiv.className='bucket-chain';
+
+      chain.forEach((item,j)=>{
+        if(j>0){
+          const arr=document.createElement('span');
+          arr.className='chain-arrow'; arr.textContent='→';
+          chainDiv.appendChild(arr);
+        }
+        const node=document.createElement('div');
+        const isNew=highlighted.bucket===i&&highlighted.chain===j&&highlighted.type==='new';
+        const isFound=highlighted.bucket===i&&highlighted.chain===j&&highlighted.type==='found';
+        node.className='chain-node'+(isNew?' new':isFound?' found':'');
+        node.textContent=item.val?`${item.key}:${item.val}`:`k=${item.key}`;
+        chainDiv.appendChild(node);
+      });
+
+      const nl=document.createElement('span');
+      nl.className='null-tag';
+      nl.textContent=chain.length?'→ NULL':'NULL';
+      chainDiv.appendChild(nl);
+      row.appendChild(chainDiv);
+      div.appendChild(row);
+    });
+    document.getElementById('load-factor').textContent=(total/TABLE_SIZE).toFixed(2);
+    document.getElementById('key-count').textContent=total;
+  }
+
+  function insertKey() {
+    const k=parseInt(document.getElementById('key').value);
+    const v=document.getElementById('keyval').value||'';
+    if(isNaN(k)){log('⚠ Enter a valid integer key','err');return;}
+    const h=hashFn(k);
+    // Check duplicate
+    const dup=table[h].findIndex(x=>x.key===k);
+    if(dup>=0){ table[h][dup].val=v; log(`⚠ Key ${k} exists — updated value`,'warn'); highlighted={bucket:h,chain:dup,type:'new'}; renderTable(); setTimeout(()=>{highlighted={bucket:-1,chain:-1,type:''};renderTable();},1500); return; }
+    table[h].push({key:k,val:v});
+    const pos=table[h].length-1;
+    highlighted={bucket:h,chain:pos,type:'new'};
+    log(`✓ Insert key=${k}${v?' val='+v:''} → bucket[${h}] (${k} mod ${TABLE_SIZE} = ${h})${table[h].length>1?' [COLLISION → chained]':''}`, 'ok');
+    document.getElementById('step-info').textContent=`hash(${k}) = ${k} mod ${TABLE_SIZE} = ${h} → inserted at bucket[${h}]${table[h].length>1?' (collision → chained)':''}`;
+    renderTable();
+    setTimeout(()=>{highlighted={bucket:-1,chain:-1,type:''};renderTable();},1800);
+  }
+
+  function searchKey() {
+    const k=parseInt(document.getElementById('key').value);
+    if(isNaN(k)){log('⚠ Enter a key to search','err');return;}
+    const h=hashFn(k);
+    const idx=table[h].findIndex(x=>x.key===k);
+    document.getElementById('step-info').textContent=`hash(${k}) = ${h} → checking bucket[${h}]`;
+    if(idx>=0){
+      highlighted={bucket:h,chain:idx,type:'found'};
+      log(`✓ Found key=${k}${table[h][idx].val?' val='+table[h][idx].val:''} at bucket[${h}] chain[${idx}]`,'ok');
+      renderTable();
+      setTimeout(()=>{highlighted={bucket:-1,chain:-1,type:''};renderTable();},2000);
+    } else {
+      log(`✗ Key ${k} not found in bucket[${h}]`,'err');
+      renderTable();
+    }
+  }
+
+  function deleteKey() {
+    const k=parseInt(document.getElementById('key').value);
+    if(isNaN(k)){log('⚠ Enter a key to delete','err');return;}
+    const h=hashFn(k);
+    const idx=table[h].findIndex(x=>x.key===k);
+    if(idx<0){log(`✗ Key ${k} not found`,'err');return;}
+    table[h].splice(idx,1);
+    log(`✓ Deleted key=${k} from bucket[${h}]`,'ok');
+    renderTable();
+  }
+
+  function resetHash(){
+    table=Array.from({length:TABLE_SIZE},()=>[]);
+    highlighted={bucket:-1,chain:-1,type:''};
+    document.getElementById('step-info').textContent='Insert a key to see hashing in action';
+    log('Hash table cleared','inf');
+    renderTable();
+  }
+
+  function changeSize(s){
+    TABLE_SIZE=parseInt(s);
+    document.getElementById('mod-val').textContent=TABLE_SIZE;
+    document.getElementById('tbl-size').textContent=TABLE_SIZE;
+    table=Array.from({length:TABLE_SIZE},()=>[]);
+    highlighted={bucket:-1,chain:-1,type:''};
+    log(`Table size changed to ${TABLE_SIZE}`,'inf');
+    renderTable();
+  }
+
+  // Preload some keys
+  [[15,'Alice'],[22,'Bob'],[8,'Carol'],[29,'Dave'],[1,'Eve']].forEach(([k,v])=>{
+    const h=hashFn(k);
+    table[h].push({key:k,val:v});
+  });
+  renderTable();
+</script>
+</body>
+</html>

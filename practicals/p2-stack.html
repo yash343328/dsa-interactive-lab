@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>P2 — Stack | DSA Lab</title>
+  <link rel="stylesheet" href="../assets/shared.css"/>
+  <style>
+    .stack-container {
+      display: flex; flex-direction: column-reverse;
+      align-items: center; gap: 6px;
+      min-height: 260px;
+      padding: 10px 0;
+    }
+    .stack-item {
+      width: 180px; height: 50px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      background: #15151e;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 16px; font-weight: 700;
+      transition: all 0.4s cubic-bezier(0.23,1,0.32,1);
+      position: relative;
+      animation: slideIn 0.4s ease;
+    }
+    @keyframes slideIn { from { opacity:0; transform: translateY(-20px); } to { opacity:1; transform: translateY(0); } }
+    .stack-item.top-item { border-color: var(--accent); color: var(--accent); background: rgba(0,255,136,0.06); }
+    .stack-item .idx-tag {
+      font-size: 10px; color: var(--muted); letter-spacing: 1px;
+    }
+    .stack-bottom-label {
+      font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted);
+      border-top: 2px dashed var(--border);
+      width:180px; text-align:center;
+      padding-top: 6px; margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+  <a class="back-btn" href="../index.html">← Back to Lab</a>
+  <div class="prac-header">
+    <div class="prac-num">PRACTICAL 02</div>
+    <h1>Stack</h1>
+    <p>Last In First Out (LIFO) — Push · Pop · Peek with animation</p>
+  </div>
+
+  <div class="theory-box">
+    <h3>// THEORY</h3>
+    <p>A <strong style="color:var(--text)">Stack</strong> is a LIFO (Last In, First Out) data structure. Operations happen only at the TOP.</p>
+    <ul style="margin-top:8px">
+      <li>Push: add element to top — O(1)</li>
+      <li>Pop: remove element from top — O(1)</li>
+      <li>Peek: view top without removing — O(1)</li>
+      <li>Use cases: undo/redo, function call stack, expression evaluation</li>
+    </ul>
+  </div>
+
+  <div class="controls">
+    <input type="number" id="val" placeholder="Value"/>
+    <button class="primary" onclick="push()">Push ↑</button>
+    <button onclick="pop()">Pop ↓</button>
+    <button onclick="peek()">Peek 👁</button>
+    <button onclick="resetStack()">Reset</button>
+  </div>
+
+  <div style="display:flex;gap:20px;flex-wrap:wrap">
+    <div class="viz-area" style="flex:1;min-width:200px">
+      <div class="viz-title">// STACK (top → bottom)</div>
+      <div id="stack-vis" class="stack-container"></div>
+      <div class="stack-bottom-label">BOTTOM</div>
+      <div style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">
+        Top index: <span id="top-idx" style="color:var(--accent)">-1</span> &nbsp;|&nbsp; Size: <span id="stack-size" style="color:var(--accent)">0</span>
+      </div>
+    </div>
+    <div style="flex:1;min-width:200px">
+      <div class="theory-box">
+        <h3>// COMPLEXITY</h3>
+        <table class="complexity-table">
+          <tr><th>Op</th><th>Time</th><th>Space</th></tr>
+          <tr><td>Push</td><td>O(1)</td><td>O(1)</td></tr>
+          <tr><td>Pop</td><td>O(1)</td><td>O(1)</td></tr>
+          <tr><td>Peek</td><td>O(1)</td><td>O(1)</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="log-area" id="log">
+    <span class="inf">&gt; Stack ready. Max size: 8</span><br/>
+  </div>
+</div>
+<script>
+  let stack = [3, 9, 15];
+  const MAX = 8;
+  function log(msg, cls='') {
+    const l = document.getElementById('log');
+    l.innerHTML += `<span class="${cls}">&gt; ${msg}</span><br/>`;
+    l.scrollTop = l.scrollHeight;
+  }
+  function render(popAnim=false) {
+    const vis = document.getElementById('stack-vis');
+    vis.innerHTML = '';
+    stack.forEach((v,i) => {
+      const item = document.createElement('div');
+      item.className = 'stack-item' + (i === stack.length-1 ? ' top-item' : '');
+      if (popAnim && i === stack.length-1) item.style.opacity='0.3';
+      item.innerHTML = `<span>${v}</span><span class="idx-tag">[${i}]${i===stack.length-1?' ← TOP':''}</span>`;
+      vis.appendChild(item);
+    });
+    document.getElementById('top-idx').textContent = stack.length-1;
+    document.getElementById('stack-size').textContent = stack.length;
+  }
+  function push() {
+    const v = parseInt(document.getElementById('val').value);
+    if (isNaN(v)) { log('⚠ Enter a valid value', 'err'); return; }
+    if (stack.length >= MAX) { log('⚠ Stack Overflow! Max size reached', 'err'); return; }
+    stack.push(v);
+    log(`✓ Pushed ${v} → top[${stack.length-1}]`, 'ok');
+    render();
+  }
+  function pop() {
+    if (stack.length === 0) { log('⚠ Stack Underflow! Stack is empty', 'err'); return; }
+    render(true);
+    setTimeout(() => {
+      const v = stack.pop();
+      log(`✓ Popped ${v} from top`, 'ok');
+      render();
+    }, 500);
+  }
+  function peek() {
+    if (stack.length === 0) { log('⚠ Stack is empty', 'err'); return; }
+    log(`👁 Top element: ${stack[stack.length-1]} at index ${stack.length-1}`, 'inf');
+  }
+  function resetStack() {
+    stack = [3, 9, 15];
+    log('Stack reset', 'inf');
+    render();
+  }
+  render();
+</script>
+</body>
+</html>
