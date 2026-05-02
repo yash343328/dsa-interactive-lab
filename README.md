@@ -151,4 +151,3 @@ This project is open-source and free to use for educational purposes.
 
 ---
 
-## ❤️ Made with Passion by Yash Jain
